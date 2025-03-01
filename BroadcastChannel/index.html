@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<div id="box" style="position: fixed; width: 100px; height: 100px; background-color: black">
+</div>
+<script>
+    let box = document.getElementById('box');
+
+    function barHeight() {
+        return window.outerHeight - window.innerHeight;
+    }
+
+    function clientToScreen(clientX, clientY) {
+        const screenX = clientX + window.screenX;
+        const screenY = clientY + window.screenY + barHeight();
+        return [screenX, screenY]
+    }
+
+    function screenToClient(screenX, screenY) {
+        const clientX = screenX - window.screenX;
+        const clientY = screenY - window.screenY - barHeight();
+        return [clientX, clientY]
+    }
+
+    const channel = new BroadcastChannel('box');
+
+    channel.onmessage = (e) => {
+        const [screenX, screenY] = e.data;
+        const [clientX, clientY] = screenToClient(screenX, screenY);
+        box.style.left = clientX + 'px';
+        box.style.top = clientY + 'px';
+    }
+
+    box.onmousedown = (e) => {
+        const startX = e.pageX;
+        const startY = e.pageY;
+        const initialLeft = box.offsetLeft;
+        const initialTop = box.offsetTop;
+
+        window.onmousemove = (e) => {
+            const deltaX = e.pageX - startX;
+            const deltaY = e.pageY - startY;
+            let newLeft = initialLeft + deltaX;
+            let newTop = initialTop + deltaY;
+            box.style.left = newLeft + 'px';
+            box.style.top = newTop + 'px';
+
+            const points = clientToScreen(newLeft, newTop);
+            channel.postMessage(points);
+        }
+
+        window.onmouseup = () => {
+            window.onmousemove = null;
+            window.onmouseup = null;
+        }
+    }
+</script>
+</body>
+</html>
